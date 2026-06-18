@@ -228,12 +228,22 @@ expenseForm.addEventListener("submit", async function (e) {
 filterCategory.addEventListener("change", function () {
   renderDashboard();
 });
-
-clearBtn.addEventListener("click", function () {
-  if (confirm("Are you sure you want to completely clear your ledger?")) {
+//Button Function
+clearBtn.addEventListener("click", async () => {
+  if (confirm("Are you sure you want to completely clear your ledger from the cloud?")) {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session) return;
+    const { error } = await supabaseClient
+      .from("transactions")
+      .delete()
+      .eq("user_id", session.user.id);
+    if (error) {
+      alert("Failed to clear ledger: " + error.message);
+      return;
+    }
     expenses = [];
-    localStorage.removeItem("myExpenses");
     renderDashboard();
+    console.log("Ledger cleared from cloud and local storage.");
   }
 });
 //Login form Logic
