@@ -1,102 +1,103 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Personal Expense Tracker</title>
-    <link rel="stylesheet" href="style.css" />
-  </head>
-  <body>
-   <div class="dashboard-wrapper">
-  
-  <aside class="control-panel">
-    <h2>Add Transaction</h2>
-    <form id="expense-form">
-      <div class="input-group">
-        <label for="transaction-type">Type</label>
-        <select id="transaction-type">
-          <option value="expense">Expense 🔴</option>
-          <option value="income">Income 🟢</option>
-        </select>
-      </div>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Personal Expense Tracker</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
 
-      <div class="input-group">
-        <label for="expense-name">Description</label>
-        <input type="text" id="expense-name" placeholder="e.g., Paycheck or Groceries" required>
-      </div>
-
-      <div class="input-group">
-        <label for="expense-amount">Amount ($)</label>
-        <input type="number" id="expense-amount" placeholder="0.00" step="0.01" required>
-      </div>
-
-      <div class="input-group">
-        <label for="expense-category">Category</label>
-        <select id="expense-category">
-          <option value="Food">Food 🍔</option>
-          <option value="Bills">Bills 📑</option>
-          <option value="Entertainment">Entertainment 🎬</option>
-          <option value="Work">Work/Salary 💼</option>
-          <option value="Other">Other 📦</option>
-        </select>
-      </div>
-
-      <button type="submit" class="btn-submit">Log Transaction</button>
+  <div id="auth-container" style="max-width: 400px; margin: 4rem auto; padding: 2rem; background-color: #1e293b; border-radius: 12px; color: #f8fafc; font-family: sans-serif; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
+    <h2 style="text-align: center; margin-bottom: 1.5rem;">Welcome to Expense Tracker</h2>
+    <form id="login-form" style="display: flex; flex-direction: column; gap: 1rem;">
+      <input type="email" id="email" placeholder="you@example.com" required style="padding: 0.75rem; border-radius: 6px; border: 1px solid #475569; background-color: #0f172a; color: white;" />
+      <input type="password" id="password" placeholder="••••••••" required style="padding: 0.75rem; border-radius: 6px; border: 1px solid #475569; background-color: #0f172a; color: white;" />
+      <button type="submit" style="padding: 0.75rem; background-color: #10b981; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">Log In</button>
+      <button type="button" id="btn-signup" style="background: none; border: 1px solid #64748b; color: #cbd5e1; padding: 0.75rem; border-radius: 6px; font-weight: 600;">Sign Up</button>
     </form>
-    <button id="clear-btn" class="btn-clear" style="width: 100%; margin-top: 1rem; background: none; border: 1px solid #f43f5e; color: #f43f5e; padding: 0.75rem; font-weight: 600; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
-  Clear All Data ⚠️
+    <button id="btn-github-sso" style="width: 100%; margin-top: 1rem; padding: 0.75rem; background-color: #24292e; color: white; border-radius: 6px; cursor: pointer;">Sign In with GitHub 💻</button>
+    <button id="btn-google-sso" style="width: 100%; margin-top: 0.5rem; padding: 0.75rem; background-color: #4285f4; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+  Sign In with Google
 </button>
-  </aside>
+  </div>
 
-  <main class="dashboard-main">
-    
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; width: 100%;">
-      <header class="balance-card" style="border-left-color: #10b981;">
-        <span class="card-label">Total Income</span>
-        <h2 style="font-size: 1.5rem; font-weight: 700; margin-top: 0.25rem; color: #10b981;">+$<span id="total-income">0.00</span></h2>
-      </header>
+  <div id="app-container" style="display: none;">
+    <button id="btn-logout" style="position: absolute; top: 10px; right: 10px;">Log Out</button>
 
-      <header class="balance-card" style="border-left-color: #f43f5e;">
-        <span class="card-label">Total Expenses</span>
-        <h2 style="font-size: 1.5rem; font-weight: 700; margin-top: 0.25rem; color: #f43f5e;">-$<span id="total-expense">0.00</span></h2>
-      </header>
+    <h1>Expense Tracker</h1>
+    <div class="dashboard-wrapper">
+      
+      <aside class="control-panel">
+        <h2>Add Transaction</h2>
+        <form id="expense-form">
+          <select id="transaction-type">
+            <option value="expense">Expense 🔴</option>
+            <option value="income">Income 🟢</option>
+          </select>
+          <input type="text" id="expense-name" placeholder="Description" required>
+          <input type="number" id="expense-amount" placeholder="Amount ($)" step="0.01" required>
+          <select id="expense-category">
+            <option value="Food">Food 🍔</option>
+            <option value="Bills">Bills 📑</option>
+            <option value="Entertainment">Entertainment 🎬</option>
+            <option value="Work">Work/Salary 💼</option>
+            <option value="Other">Other 📦</option>
+          </select>
+          <button type="submit" class="btn-submit">Log Transaction</button>
+        </form>
+        
+        <button id="clear-btn" class="btn-clear" style="width: 100%; margin-top: 1rem; background: none; border: 1px solid #f43f5e; color: #f43f5e; padding: 0.75rem; font-weight: 600; border-radius: 8px; cursor: pointer;">
+          Clear All Data ⚠️
+        </button>
+      </aside>
 
-      <header class="balance-card" style="border-left-color: var(--accent-color);">
-        <span class="card-label">Net Balance</span>
-        <h2 style="font-size: 1.5rem; font-weight: 700; margin-top: 0.25rem;">$<span id="total-amount">0.00</span></h2>
-      </header>
+      <main class="dashboard-main">
+        
+        <div class="budget-wrapper" style="background-color: var(--panel-bg); padding: 1.25rem; border-radius: 12px;">
+          <h3>Set Monthly Budget</h3>
+          <div id="budget-warning" style="color: #f43f5e; font-size: 0.8rem; margin-top: 0.5rem; display: none;">
+  ⚠️ Warning: Budget exceeds your total income!
+</div>
+          <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+            <input type="number" id="budget-input" placeholder="Enter limit">
+            <button id="btn-update-budget">Save Budget</button>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 0.5rem;">
+            <span>Limit: <strong>$<span id="budget-limit-text">0.00</span></strong></span>
+            <span><span id="budget-percentage">0</span>% Used</span>
+          </div>
+          <div class="progress-bar-container" style="background-color: #0f172a; width: 100%; height: 12px; border-radius: 6px; overflow: hidden;">
+            <div id="progress-bar-fill" style="background-color: #10b981; width: 0%; height: 100%;"></div>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1.5rem;">
+          <header class="balance-card"><span>Total Income</span><h2 id="total-income">+$0.00</h2></header>
+          <header class="balance-card"><span>Total Expenses</span><h2 id="total-expense">-$0.00</h2></header>
+          <header class="balance-card"><span>Net Balance</span><h2 id="total-amount">$0.00</h2></header>
+        </div>
+
+        <section class="ledger-container" style="margin-top: 1.5rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h3>Transaction History</h3>
+            <select id="filter-category" style="padding: 0.4rem 0.8rem;">
+              <option value="All">All Categories 🌐</option>
+              <option value="Food">Food 🍔</option>
+              <option value="Bills">Bills 📑</option>
+              <option value="Entertainment">Entertainment 🎬</option>
+              <option value="Work">Work 💼</option>
+              <option value="Other">Other 📦</option>
+            </select>
+          </div>
+          <ul id="expense-list" class="expense-list"></ul>
+        </section>
+
+      </main>
     </div>
-    <div class="budget-wrapper" style="background-color: var(--panel-bg); padding: 1.25rem; border-radius: 12px; margin-top: 1.5rem;">
-  <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 0.5rem; color: var(--text-muted);">
-    <span>Monthly Budget Limit: <strong>$<span id="budget-limit-text">1000.00</span></strong></span>
-    <span><span id="budget-percentage">0</span>% Used</span>
-  </div>
-  
-  <div class="progress-bar-container" style="background-color: #0f172a; width: 100%; height: 12px; border-radius: 6px; overflow: hidden; border: 1px solid #334155;">
-    <div id="progress-bar-fill" style="background-color: #10b981; width: 0%; height: 100%; transition: width 0.4s ease, background-color 0.4s ease;"></div>
-  </div>
-</div>
+  </div> 
 
-    
-
-    <section class="ledger-container">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-        <h3>Transaction History</h3>
-        <select id="filter-category" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; background-color: var(--panel-bg);">
-          <option value="All">All Categories 🌐</option>
-          <option value="Food">Food 🍔</option>
-          <option value="Bills">Bills 📑</option>
-          <option value="Entertainment">Entertainment 🎬</option>
-          <option value="Work">Work 💼</option>
-          <option value="Other">Other 📦</option>
-        </select>
-      </div>
-      <ul id="expense-list" class="expense-list"></ul>
-    </section>
-
-  </main>
-</div>
-
-    <script src="script.js"></script>
-  </body>
+  <script src="script.js"></script>
+</body>
 </html>
