@@ -288,13 +288,13 @@ btnGoogleSSO.addEventListener("click", async () => {
   const { error } = await supabaseClient.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: window.location.origin,
+      redirectTo: window.location.origin + window.location.pathname,
     },
   });
 
   if (error) {
     console.error("Error logging in with Google:", error.message);
-    alert("Login failed. Check console for details.");
+    alert("Login failed.");
   }
 });
 
