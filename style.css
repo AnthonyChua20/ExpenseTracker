@@ -165,6 +165,44 @@ input:focus, select:focus {
   animation: slideIn 0.3s ease-out;
 }
 
+#btn-logout {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background-color: transparent;
+  color: #ff4d4d;
+  border: 1px solid #ff4d4d;
+  padding: 6px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+#btn-logout:hover {
+  background-color: #ff4d4d;
+  color: white;
+}
+
+#btn-update-budget {
+  padding: 0.6rem 1.2rem;
+  background-color: transparent; 
+  color: #10b981;              
+  border: 1px solid #10b981;   
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+#btn-update-budget:hover {
+  background-color: #10b981;
+  color: white;                
+}
+
+#btn-update-budget:active {
+  transform: scale(0.98);
+}
+
 @keyframes slideIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
