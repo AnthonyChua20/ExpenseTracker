@@ -1,19 +1,87 @@
+
+const SUPABASE_URL = "https://bfvosnflupzngvepkadc.supabase.co";
+const SUPABASE_KEY = "sb_publishable_tVHWI7OLSRjeGldt9bPiIQ_aHPNewe6";
+
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// Monitor Authentication State changes (Sign In / Sign Out)
+supabaseClient.auth.onAuthStateChange((event, session) => {
+  const authContainer = document.getElementById("auth-container");
+  const appContainer = document.getElementById("app-container");
+
+  if (session) {
+    authContainer.style.display = "none";
+    appContainer.style.display = "block";
+    console.log("Logged in user:", session.user.email);
+  } else {
+    authContainer.style.display = "block";
+    appContainer.style.display = "none";
+
+    console.log("No active user session.");
+  }
+});
+
+const channel = supabaseClient
+  .channel("custom-all-channel")
+  .on(
+    "postgres_changes",
+    { event: "INSERT", schema: "public", table: "transactions" },
+    (payload) => {
+      console.log("New transaction detected!", payload);
+      // Add the new row to your local array and refresh the UI
+      expenses.push(payload.new);
+      renderDashboard();
+    },
+  )
+  .subscribe();
+
+
+window.addEventListener('load', async () => {
+  const { data, error } = await supabaseClient.auth.getSession();
+  
+  if (data.session) {
+    renderDashboard(); 
+  }
+});
+
 let expenses = [];
 let expenseForm = document.getElementById("expense-form");
 let expenseName = document.getElementById("expense-name");
 let expenseAmount = document.getElementById("expense-amount");
 let expenseCategory = document.getElementById("expense-category");
 const expenseList = document.getElementById("expense-list");
-const filterCategory = document.getElementById("filter-category");
+const 
+
+filterCategory = document.getElementById("filter-category");
 const clearBtn = document.getElementById("clear-btn");
 const transactionType = document.getElementById("transaction-type");
-
+const btnSignUp = document.getElementById("btn-signup");
+const email = document.getElementById("email");
+const password = document.getElementById("password");
+const loginForm = document.getElementById("login-form");
+const btnGitHubSSO = document.getElementById("btn-github-sso");
+const btnLogout = document.getElementById("btn-logout");
+const btnGoogleSSO = document.getElementById("btn-google-sso")
 function formatDate(timestamp) {
   const date = new Date(timestamp);
   return date.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
   });
+}
+
+
+ 
+function checkBudgetWarning() {
+  const budgetLimit = parseFloat(document.getElementById("budget-limit-text").innerText);
+  const totalIncome = parseFloat(document.getElementById("total-income").innerText);
+  const warningElement = document.getElementById("budget-warning");
+
+  if (budgetLimit > totalIncome) {
+    warningElement.style.display = "block";
+  } else {
+    warningElement.style.display = "none";
+  }
 }
 
 function renderDashboard() {
@@ -66,18 +134,16 @@ function renderDashboard() {
       totalExpense += item.amount;
     }
   });
-  let netBalance = totalIncome - totalExpense;
-  document.getElementById("total-income").innerText = totalIncome.toFixed(2);
-  document.getElementById("total-expense").innerText = totalExpense.toFixed(2);
-  document.getElementById("total-amount").innerText = netBalance.toFixed(2);
-  const budgetLimit = 1000;
-  const visualPercentage = Math.min((totalExpense / budgetLimit) * 100, 100);
-  const truePercentage = (totalExpense / budgetLimit) * 100;
+  const budgetLimit =
+    parseFloat(document.getElementById("budget-limit-text").innerText) || 1000;
+
+  const truePercentage =
+    budgetLimit > 0 ? (totalExpense / budgetLimit) * 100 : 0;
+  const visualPercentage = Math.min(truePercentage, 100);
 
   document.getElementById("budget-percentage").innerText =
     truePercentage.toFixed(0);
   const barFill = document.getElementById("progress-bar-fill");
-
   barFill.style.width = visualPercentage + "%";
 
   if (truePercentage >= 100) {
@@ -87,47 +153,77 @@ function renderDashboard() {
   } else {
     barFill.style.backgroundColor = "#10b981";
   }
+
+  let netBalance = totalIncome - totalExpense;
+  document.getElementById("total-income").innerText = totalIncome.toFixed(2);
+  document.getElementById("total-expense").innerText = totalExpense.toFixed(2);
+  document.getElementById("total-amount").innerText = netBalance.toFixed(2);
+   
+ checkBudgetWarning();
+}
+
+async function fetchTransactions() {
+  const {
+    data: { session },
+  } = await supabaseClient.auth.getSession();
+  if (!session) return;
+
+  const { data, error } = await supabaseClient
+    .from("transactions")
+    .select("*")
+    .eq("user_id", session.user.id); // Only fetch YOUR data
+
+  if (error) {
+    console.error("Error fetching data:", error);
+  } else {
+    // Replace the local array with the data from the cloud
+    expenses = data;
+    renderDashboard();
+  }
 }
 
 function deleteExpense(id) {
   expenses = expenses.filter(function (expense) {
     return expense.id !== id;
   });
-  saveData();
   renderDashboard();
 }
-
-expenseForm.addEventListener("submit", function (e) {
+//Submitting transaction form
+expenseForm.addEventListener("submit", async function (e) {
   e.preventDefault();
-  console.log("testing");
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabaseClient.auth.getSession();
 
-  const newExpense = {
-    id: Date.now(),
+  if (sessionError || !session) {
+    alert("No active session found. Please log in again.");
+    return;
+  }
+
+  const newTransaction = {
     name: expenseName.value,
     amount: parseFloat(expenseAmount.value),
     category: expenseCategory.value,
     type: transactionType.value,
+    user_id: session.user.id,
   };
 
-  expenses.push(newExpense);
-  saveData();
-  renderDashboard();
-  console.log(expenses);
-  expenseForm.reset();
-});
+  const { data, error } = await supabaseClient
+    .from("transactions")
+    .insert([newTransaction])
+    .select();
 
-function saveData() {
-  localStorage.setItem("myExpenses", JSON.stringify(expenses));
-}
-
-function loadData() {
-  let savedData = localStorage.getItem("myExpenses");
-
-  if (savedData) {
-    expenses = JSON.parse(savedData);
+  if (error) {
+    alert("Failed to save transaction: " + error.message);
+    console.error(error);
+  } else {
+    console.log("Saved to cloud successfully:", data);
+    expenses.push(data[0]);
+    renderDashboard();
+    expenseForm.reset();
   }
-  renderDashboard();
-}
+});
 
 filterCategory.addEventListener("change", function () {
   renderDashboard();
@@ -140,5 +236,141 @@ clearBtn.addEventListener("click", function () {
     renderDashboard();
   }
 });
+//Login form Logic
+loginForm.addEventListener("submit", async (e) => {
+  e.preventDefault(); // Stop the page from reloading
 
-loadData();
+  const { data, error } = await supabaseClient.auth.signInWithPassword({
+    email: email.value,
+    password: password.value,
+  });
+
+  if (error) {
+    alert("Login failed: " + error.message);
+  } else {
+    console.log("Logged in successfully!", data);
+  }
+});
+
+//Sign up button
+btnSignUp.addEventListener("click", async (e) => {
+  e.preventDefault();
+
+  const { data, error } = await supabaseClient.auth.signUp({
+    email: email.value,
+    password: password.value,
+  });
+
+  if (error) {
+    alert("Signup failed: " + error.message);
+  } else {
+    alert("Signup successful! Check your email for a confirmation link.");
+  }
+});
+
+
+//GitHub SSO button
+btnGitHubSSO.addEventListener("click", async () => {
+  const { data, error } = await supabaseClient.auth.signInWithOAuth({
+    provider: "github",
+    options: {
+      // Redirects right back to your tracker after they approve github access!
+      redirectTo: window.location.origin + window.location.pathname,
+    },
+  });
+
+  if (error) {
+    alert("SSO Login failed: " + error.message);
+  }
+});
+
+btnGoogleSSO.addEventListener("click", async () => {
+  const { error } = await supabaseClient.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: window.location.origin,
+    },
+  });
+
+  if (error) {
+    console.error("Error logging in with Google:", error.message);
+    alert("Login failed. Check console for details.");
+  }
+});
+
+//Fetch Transaction
+async function fetchTransactions() {
+  const {
+    data: { session },
+  } = await supabaseClient.auth.getSession();
+  if (!session) return;
+
+  const { data, error } = await supabaseClient
+    .from("transactions")
+    .select("*")
+    .eq("user_id", session.user.id); // Only fetch YOUR data
+
+  if (error) {
+    console.error("Error fetching data:", error);
+  } else {
+    // Replace the local array with the data from the cloud
+    expenses = data;
+    renderDashboard();
+  }
+}
+//Log out
+btnLogout.addEventListener("click", async () => {
+  // 1. Tell Supabase to destroy the session
+  const { error } = await supabaseClient.auth.signOut();
+
+  if (error) {
+    console.error("Error logging out:", error);
+  } else {
+    expenses = [];
+    renderDashboard();
+    window.location.reload();
+  }
+});
+
+//Fetch Budget
+async function fetchBudget() {
+  const {
+    data: { session },
+  } = await supabaseClient.auth.getSession();
+  const { data, error } = await supabaseClient
+    .from("user_settings")
+    .select("monthly_budget")
+    .eq("user_id", session.user.id)
+    .single();
+
+  if (data) {
+    document.getElementById("budget-limit-text").innerText =
+      data.monthly_budget.toFixed(2);
+    return data.monthly_budget;
+  }
+  return 0;
+}
+//Update Budget
+document.getElementById("btn-update-budget").addEventListener("click", async () => {
+  const btn = document.getElementById('btn-update-budget');
+  const originalText = btn.innerText;
+
+  btn.innerText = "Saving...";
+  btn.disabled = true;
+
+  const newLimit = parseFloat(document.getElementById("budget-input").value);
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  const { error } = await supabaseClient
+    .from("user_settings")
+    .upsert({ user_id: session.user.id, monthly_budget: newLimit });
+  btn.innerText = originalText;
+  btn.disabled = false;
+
+  if (!error) {
+    document.getElementById("budget-limit-text").innerText = newLimit.toFixed(2);
+    renderDashboard();
+  }
+});
+
+ 
+fetchTransactions();
